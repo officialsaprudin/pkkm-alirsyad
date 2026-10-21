@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SI-PKKM Cloud Enterprise - Penilaian Kinerja Kepala Madrasah</title>
+    <title>PKKM - Penilaian Kinerja Kepala Madrasah</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons CDN -->
@@ -302,7 +302,7 @@
             <h3 class="font-bold text-base text-slate-900" id="modal-indicator-title">Tambah / Edit Indikator</h3>
             <input type="hidden" id="edit-orig-code">
             <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor Sub (Pilih atau Ketik)</label>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor Sub</label>
                 <div class="flex gap-2">
                     <select id="select-sub-no" onchange="onSubNoSelectChange(this.value)" class="w-1/3 border rounded px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50">
                         <option value="">-- Pilih --</option>
@@ -330,33 +330,51 @@
         </div>
     </div>
 
-    <!-- Modal Upload Evidence -->
+    <!-- Modal Evidence (Add title first, upload file/url later) -->
     <div id="modal-evidence" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg max-w-md w-full p-6 shadow-xl space-y-4">
             <h3 class="font-bold text-base text-slate-900">Kelola Berkas Bukti Fisik</h3>
             <input type="hidden" id="upload-indicator-code">
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Judul / Nama Dokumen</label>
-                <input type="text" id="evidence-title" class="w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: SK Tim Penyusun / Jadwal">
+            <div class="bg-slate-50 p-3 rounded border border-slate-200 space-y-2">
+                <h4 class="text-xs font-bold text-slate-700">1. Tambah Judul Berkas Baru</h4>
+                <div>
+                    <input type="text" id="evidence-title" class="w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 bg-white" placeholder="Nama Dokumen (Contoh: SK Tim Penyusun)">
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="addEvidenceTitleOnly()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded flex items-center gap-1">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Judul Saja
+                    </button>
+                </div>
             </div>
+            <hr class="my-2">
             <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih File (Opsional)</label>
+                <h4 class="text-xs font-bold text-slate-700 mb-2">2. Daftar Judul & Unggah Dokumen Pendukung:</h4>
+                <div id="evidence-list-container" class="space-y-3 max-h-56 overflow-y-auto pr-1">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            <div class="flex justify-end pt-2 border-t">
+                <button onclick="closeModal('modal-evidence')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded">Selesai / Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Upload File for specific evidence item -->
+    <div id="modal-upload-file" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-sm w-full p-6 shadow-xl space-y-4">
+            <h3 class="font-bold text-base text-slate-900">Unggah File / Tautan Dokumen</h3>
+            <input type="hidden" id="active-evidence-id">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih File dari Komputer/HP</label>
                 <input type="file" id="evidence-file-input" class="w-full border rounded px-3 py-2 text-xs bg-slate-50 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
             </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1">Atau Tautan URL Eksternal</label>
                 <input type="text" id="evidence-url" class="w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" placeholder="https://...">
             </div>
-            <div class="flex justify-between items-center pt-2">
-                <button onclick="closeModal('modal-evidence')" class="px-4 py-2 border text-xs font-medium rounded hover:bg-slate-50">Tutup</button>
-                <button onclick="addEvidenceItem()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded">Simpan Bukti</button>
-            </div>
-            <hr class="my-2">
-            <div>
-                <h4 class="text-xs font-bold text-slate-700 mb-2">Daftar Dokumen Terunggah:</h4>
-                <div id="evidence-list-container" class="space-y-2 max-h-40 overflow-y-auto">
-                    <!-- Populated dynamically -->
-                </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-upload-file')" class="px-4 py-2 border text-xs font-medium rounded hover:bg-slate-50">Batal</button>
+                <button onclick="saveEvidenceFile()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded">Simpan File</button>
             </div>
         </div>
     </div>
@@ -562,15 +580,22 @@
                         </select>
                     </td>
                     <td>
-                        <div class="space-y-1">
+                        <div class="space-y-1.5">
                             ${evs.map(ev => `
-                                <div class="flex items-center justify-between text-xs bg-slate-50 p-1.5 rounded border border-slate-100">
-                                    <a href="${ev.file_url || '#'}" target="_self" class="text-blue-600 hover:underline truncate max-w-[200px] md:max-w-xs">${ev.title}</a>
-                                    <button onclick="deleteEvidence('${ev.id}')" class="text-rose-500 hover:text-rose-700 ml-2"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                                <div class="flex items-center justify-between text-xs bg-slate-50 p-2 rounded border border-slate-200">
+                                    <div class="flex items-center gap-2 truncate max-w-[220px] md:max-w-md">
+                                        <a href="${ev.file_url && ev.file_url !== '#' ? ev.file_url : '#'}" target="_self" class="${ev.file_url && ev.file_url !== '#' ? 'text-blue-600 font-medium hover:underline' : 'text-slate-500 italic'} truncate">
+                                            ${ev.title} ${ev.file_url && ev.file_url !== '#' ? '✓' : ''}
+                                        </a>
+                                        <button onclick="openUploadFileModal('${ev.id}')" class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded hover:bg-emerald-100 shrink-0">
+                                            ${ev.file_url && ev.file_url !== '#' ? 'Ganti File' : '+ Unggah File'}
+                                        </button>
+                                    </div>
+                                    <button onclick="deleteEvidence('${ev.id}')" class="text-rose-500 hover:text-rose-700 ml-2 shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                                 </div>
                             `).join('')}
                             <button onclick="openEvidenceModal('${ind.indicator_code}')" class="mt-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
-                                <i data-lucide="plus-circle" class="w-3 h-3"></i> Tambah Bukti Fisik
+                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Tambah Berkas Bukti Fisik
                             </button>
                         </div>
                     </td>
@@ -598,7 +623,6 @@
             const selectEl = document.getElementById('select-sub-no');
             selectEl.innerHTML = '<option value="">-- Pilih --</option>';
             
-            // Ambil unique sub_no dari menu saat ini
             const currentMenuSubs = [...new Set(
                 indicatorsData
                     .filter(i => Number(i.menu_id) === parseInt(currentTab))
@@ -691,8 +715,6 @@
         function openEvidenceModal(code) {
             document.getElementById('upload-indicator-code').value = code;
             document.getElementById('evidence-title').value = '';
-            document.getElementById('evidence-url').value = '';
-            document.getElementById('evidence-file-input').value = '';
             renderEvidenceList(code);
             document.getElementById('modal-evidence').classList.remove('hidden');
         }
@@ -705,23 +727,66 @@
                 return;
             }
             container.innerHTML = evs.map(ev => `
-                <div class="flex items-center justify-between text-xs bg-slate-50 p-2 rounded border">
-                    <span class="truncate max-w-[200px] font-medium">${ev.title}</span>
-                    <button onclick="deleteEvidence('${ev.id}')" class="text-rose-500 hover:text-rose-700 font-bold">Hapus</button>
+                <div class="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded border">
+                    <div class="truncate max-w-[220px]">
+                        <span class="font-medium text-slate-800">${ev.title}</span>
+                        <div class="text-[10px] ${ev.file_url && ev.file_url !== '#' ? 'text-emerald-600 font-medium' : 'text-slate-400 italic'}">
+                            ${ev.file_url && ev.file_url !== '#' ? 'File terlampir' : 'Belum ada file'}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="openUploadFileModal('${ev.id}')" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded border border-emerald-200">
+                            ${ev.file_url && ev.file_url !== '#' ? 'Ganti File' : 'Unggah'}
+                        </button>
+                        <button onclick="deleteEvidence('${ev.id}')" class="text-rose-500 hover:text-rose-700 p-1 font-bold"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                    </div>
                 </div>
             `).join('');
+            lucide.createIcons();
         }
 
-        async function addEvidenceItem() {
+        async function addEvidenceTitleOnly() {
             const code = document.getElementById('upload-indicator-code').value;
             const title = document.getElementById('evidence-title').value.trim();
-            const fileInput = document.getElementById('evidence-file-input');
-            let fileUrl = document.getElementById('evidence-url').value.trim();
 
             if (!title) {
                 showToast('Judul dokumen wajib diisi!', 'error');
                 return;
             }
+
+            const newId = Date.now().toString();
+            const newEv = {
+                id: newId,
+                indicator_code: code,
+                title: title,
+                file_url: '#'
+            };
+
+            evidenceData.push(newEv);
+            if (!is_preview) {
+                await supabaseClient.from('pkkm_evidence').insert({ indicator_code: code, title, file_url: '#' });
+            }
+
+            document.getElementById('evidence-title').value = '';
+            renderEvidenceList(code);
+            renderMatrixView(parseInt(currentTab));
+            showToast('Judul berkas berhasil ditambahkan!');
+        }
+
+        function openUploadFileModal(evidenceId) {
+            document.getElementById('active-evidence-id').value = evidenceId;
+            document.getElementById('evidence-file-input').value = '';
+            document.getElementById('evidence-url').value = '';
+            document.getElementById('modal-upload-file').classList.remove('hidden');
+        }
+
+        async function saveEvidenceFile() {
+            const evidenceId = document.getElementById('active-evidence-id').value;
+            const fileInput = document.getElementById('evidence-file-input');
+            let fileUrl = document.getElementById('evidence-url').value.trim();
+
+            const ev = evidenceData.find(e => e.id === evidenceId);
+            if (!ev) return;
 
             if (fileInput.files && fileInput.files[0]) {
                 const file = fileInput.files[0];
@@ -741,28 +806,20 @@
                     fileUrl = URL.createObjectURL(file);
                 }
             } else if (!fileUrl) {
-                fileUrl = '#';
+                showToast('Pilih file atau masukkan URL tautan!', 'error');
+                return;
             }
 
-            const newId = Date.now().toString();
-            const newEv = {
-                id: newId,
-                indicator_code: code,
-                title: title,
-                file_url: fileUrl
-            };
-
-            evidenceData.push(newEv);
+            ev.file_url = fileUrl;
             if (!is_preview) {
-                await supabaseClient.from('pkkm_evidence').insert({ indicator_code: code, title, file_url: fileUrl });
+                await supabaseClient.from('pkkm_evidence').update({ file_url: fileUrl }).eq('id', evidenceId);
             }
 
-            document.getElementById('evidence-title').value = '';
-            document.getElementById('evidence-url').value = '';
-            document.getElementById('evidence-file-input').value = '';
-            renderEvidenceList(code);
+            closeModal('modal-upload-file');
+            const activeCode = document.getElementById('upload-indicator-code').value;
+            if (activeCode) renderEvidenceList(activeCode);
             renderMatrixView(parseInt(currentTab));
-            showToast('Bukti fisik berhasil ditambahkan!');
+            showToast('File bukti berhasil disimpan!');
         }
 
         async function deleteEvidence(id) {
@@ -775,7 +832,7 @@
                 const activeCode = document.getElementById('upload-indicator-code').value;
                 if (activeCode) renderEvidenceList(activeCode);
             }
-            showToast('Bukti fisik dihapus.');
+            showToast('Berkas bukti dihapus.');
         }
 
         function closeModal(modalId) {
