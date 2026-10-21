@@ -311,8 +311,10 @@
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Kode Indikator (Misal: 4.1.1)</label>
-                <input type="text" id="input-indicator-code" class="w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+                <label class="block text-xs font-semibold text-slate-600 mb-1" id="label-indicator-code">
+                    Kode Indikator (Bisa isi sekaligus, pisahkan koma atau enter)
+                </label>
+                <textarea id="input-indicator-code" rows="3" class="w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh sekaligus:&#10;3.1.1, 3.1.2, 3.1.3&#10;atau baris baru"></textarea>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1">Skor Kinerja (1-4)</label>
@@ -645,10 +647,11 @@
         }
 
         function openAddIndicatorModal() {
-            document.getElementById('modal-indicator-title').innerText = 'Tambah Indikator Baru';
+            document.getElementById('modal-indicator-title').innerText = 'Tambah Indikator Baru (Bisa Sekaligus)';
             document.getElementById('edit-orig-code').value = '';
             document.getElementById('input-sub-no').value = '';
             document.getElementById('input-indicator-code').value = '';
+            document.getElementById('input-indicator-code').placeholder = 'Contoh:\n3.1.1, 3.1.2, 3.1.3\n(atau pisahkan per baris)';
             document.getElementById('input-score').value = '4';
             populateSubNoDropdown();
             document.getElementById('modal-indicator').classList.remove('hidden');
@@ -661,6 +664,7 @@
             document.getElementById('edit-orig-code').value = code;
             document.getElementById('input-sub-no').value = ind.sub_no || '';
             document.getElementById('input-indicator-code').value = ind.indicator_code;
+            document.getElementById('input-indicator-code').placeholder = 'Kode Indikator (Mis: 3.1.1)';
             document.getElementById('input-score').value = ind.score;
             populateSubNoDropdown();
             document.getElementById('modal-indicator').classList.remove('hidden');
@@ -669,47 +673,75 @@
         async function saveIndicator() {
             const origCode = document.getElementById('edit-orig-code').value;
             const subNo = document.getElementById('input-sub-no').value.trim();
-            const newCode = document.getElementById('input-indicator-code').value.trim();
+            const rawCodeInput = document.getElementById('input-indicator-code').value.trim();
             const score = parseInt(document.getElementById('input-score').value);
 
-            if (!newCode) {
+            if (!rawCodeInput) {
                 showToast('Kode indikator wajib diisi!', 'error');
                 return;
             }
 
             if (origCode) {
+                // Mode Edit: Hanya mengubah satu indikator yang sedang dipilih
                 const ind = indicatorsData.find(i => i.indicator_code === origCode);
                 if (ind) {
                     ind.sub_no = subNo;
-                    ind.indicator_code = newCode;
+                    ind.indicator_code = rawCodeInput;
                     ind.score = score;
                     evidenceData.forEach(e => {
-                        if (e.indicator_code === origCode) e.indicator_code = newCode;
+                        if (e.indicator_code === origCode) e.indicator_code = rawCodeInput;
                     });
                 }
                 if (!is_preview) {
                     await supabaseClient.from('pkkm_indicators').delete().eq('indicator_code', origCode);
-                    await supabaseClient.from('pkkm_indicators').insert({ indicator_code: newCode, menu_id: parseInt(currentTab), sub_no: subNo, score });
+                    await supabaseClient.from('pkkm_indicators').insert({ indicator_code: rawCodeInput, menu_id: parseInt(currentTab), sub_no: subNo, score });
                 }
+                showToast('Indikator berhasil diperbarui!');
             } else {
-                if (indicatorsData.some(i => i.indicator_code === newCode)) {
-                    showToast('Kode indikator sudah ada!', 'error');
+                // Mode Tambah: Memisahkan input berdasarkan koma, titik koma, atau baris baru
+                const codeList = rawCodeInput
+                    .split(/[\n,;]+/)
+                    .map(c => c.trim())
+                    .filter(c => c.length > 0);
+
+                if (codeList.length === 0) {
+                    showToast('Kode indikator tidak valid!', 'error');
                     return;
                 }
-                indicatorsData.push({
-                    indicator_code: newCode,
-                    menu_id: parseInt(currentTab),
-                    sub_no: subNo,
-                    score: score
-                });
-                if (!is_preview) {
-                    await supabaseClient.from('pkkm_indicators').insert({ indicator_code: newCode, menu_id: parseInt(currentTab), sub_no: subNo, score });
+
+                let addedCount = 0;
+                let skippedCount = 0;
+                const newInserts = [];
+
+                for (const code of codeList) {
+                    if (indicatorsData.some(i => i.indicator_code === code)) {
+                        skippedCount++;
+                        continue;
+                    }
+                    const newEntry = {
+                        indicator_code: code,
+                        menu_id: parseInt(currentTab),
+                        sub_no: subNo,
+                        score: score
+                    };
+                    indicatorsData.push(newEntry);
+                    newInserts.push(newEntry);
+                    addedCount++;
+                }
+
+                if (!is_preview && newInserts.length > 0) {
+                    await supabaseClient.from('pkkm_indicators').insert(newInserts);
+                }
+
+                if (addedCount > 0) {
+                    showToast(`${addedCount} indikator berhasil ditambahkan!${skippedCount > 0 ? ` (${skippedCount} dilewati karena sudah ada)` : ''}`);
+                } else {
+                    showToast('Semua indikator yang dimasukkan sudah ada sebelumnya!', 'error');
                 }
             }
 
             closeModal('modal-indicator');
             renderMatrixView(parseInt(currentTab));
-            showToast('Indikator berhasil disimpan!');
         }
 
         function openEvidenceModal(code) {
