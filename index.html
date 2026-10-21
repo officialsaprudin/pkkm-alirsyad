@@ -302,8 +302,13 @@
             <h3 class="font-bold text-base text-slate-900" id="modal-indicator-title">Tambah / Edit Indikator</h3>
             <input type="hidden" id="edit-orig-code">
             <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor Sub (Misal: 4.1)</label>
-                <input type="text" id="input-sub-no" class="w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor Sub (Pilih atau Ketik)</label>
+                <div class="flex gap-2">
+                    <select id="select-sub-no" onchange="onSubNoSelectChange(this.value)" class="w-1/3 border rounded px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50">
+                        <option value="">-- Pilih --</option>
+                    </select>
+                    <input type="text" id="input-sub-no" class="w-2/3 border rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Atau ketik baru (Mis: 4.1)">
+                </div>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1">Kode Indikator (Misal: 4.1.1)</label>
@@ -589,12 +594,39 @@
             }
         }
 
+        function populateSubNoDropdown() {
+            const selectEl = document.getElementById('select-sub-no');
+            selectEl.innerHTML = '<option value="">-- Pilih --</option>';
+            
+            // Ambil unique sub_no dari menu saat ini
+            const currentMenuSubs = [...new Set(
+                indicatorsData
+                    .filter(i => Number(i.menu_id) === parseInt(currentTab))
+                    .map(i => (i.sub_no || '').trim())
+                    .filter(s => s !== '')
+            )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+            currentMenuSubs.forEach(sub => {
+                const opt = document.createElement('option');
+                opt.value = sub;
+                opt.innerText = sub;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function onSubNoSelectChange(val) {
+            if (val) {
+                document.getElementById('input-sub-no').value = val;
+            }
+        }
+
         function openAddIndicatorModal() {
             document.getElementById('modal-indicator-title').innerText = 'Tambah Indikator Baru';
             document.getElementById('edit-orig-code').value = '';
             document.getElementById('input-sub-no').value = '';
             document.getElementById('input-indicator-code').value = '';
             document.getElementById('input-score').value = '4';
+            populateSubNoDropdown();
             document.getElementById('modal-indicator').classList.remove('hidden');
         }
 
@@ -606,6 +638,7 @@
             document.getElementById('input-sub-no').value = ind.sub_no || '';
             document.getElementById('input-indicator-code').value = ind.indicator_code;
             document.getElementById('input-score').value = ind.score;
+            populateSubNoDropdown();
             document.getElementById('modal-indicator').classList.remove('hidden');
         }
 
